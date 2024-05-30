@@ -3,7 +3,8 @@
 - https://homevision.notion.site/HomeVision-Backend-Take-Home-94ec9ce5da0341fb9d3dc547a5bc2e15
 
 ## Getting started
-
+- Clone this repo `git clone https://github.com/miguelToscano/homevision.git`
+- Change directory `cd homevision`
 - Run `go run .`
 
 ## TODO:
