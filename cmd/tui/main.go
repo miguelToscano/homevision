@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"homevision/internal/houses/handler"
 	"homevision/internal/houses/repository"
 	"homevision/internal/houses/service"
 
@@ -18,12 +17,9 @@ import (
 var (
 	housesRepository = repository.NewHousesRepository()
 	housesService    = service.NewHousesService(housesRepository)
-	housesHandler    = handler.NewHousesHandler(housesService)
 )
 
-// housesService.DownloadPhotos()
-
-type model struct {
+type Model struct {
 	choices          []string
 	cursor           int
 	selected         string
@@ -54,10 +50,11 @@ func NewPaginator() paginator.Model {
 }
 
 func StartTUI() {
-	m := model{
-		choices:   []string{"Download images", "List images"},
-		spinner:   spinner.New(),
-		paginator: NewPaginator(),
+	m := Model{
+		choices:          []string{"Download images", "List images"},
+		spinner:          spinner.New(),
+		paginator:        NewPaginator(),
+		downloadedImages: []string{},
 	}
 
 	p := tea.NewProgram(m)
@@ -66,11 +63,11 @@ func StartTUI() {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -101,18 +98,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.downloaded = false
 					return m, tea.Batch(spinner.Tick, performAction)
 				} else if m.selected == "List images" {
-					m.downloadedImages = housesHandler.GetDownloadedImages()
+					m.downloadedImages = housesService.GetDownloadedImages()
 					return m, nil
 				}
 			}
 
 		case "left":
-			if m.selected == "List images" {
+			if m.selected == "List images" && len(m.downloadedImages) > 0 {
 				m.paginator.PrevPage()
 			}
 
 		case "right":
-			if m.selected == "List images" {
+			if m.selected == "List images" && len(m.downloadedImages) > 0 {
 				m.paginator.NextPage()
 			}
 		}
@@ -138,13 +135,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m Model) View() string {
 	if m.loading {
-		return fmt.Sprintf("\n\n%s Downloading images...\n\n", m.spinner.View())
+		return fmt.Sprintf("\n%s Downloading images...\n", m.spinner.View())
 	}
 
 	if m.downloaded {
-		return "\n\nDownload finished! Press 'b' to go back.\n\n"
+		return "\n Download finished!\n \n b: back • q: quit\n"
 	}
 
 	if m.selected == "" {
@@ -158,8 +155,8 @@ func (m model) View() string {
 	return ""
 }
 
-func mainView(m model) string {
-	s := "Choose an option:\n\n"
+func mainView(m Model) string {
+	s := "\n Choose an option:\n\n"
 
 	for i, choice := range m.choices {
 		cursor := " "
@@ -169,27 +166,33 @@ func mainView(m model) string {
 		s += fmt.Sprintf("%s %s\n", cursor, choice)
 	}
 
-	s += "\nPress q to quit."
+	s += "\n q: quit\n"
 
 	return s
 }
 
-func listView(m model) string {
+func listView(m Model) string {
 	var b strings.Builder
-	b.WriteString("\n  Downloaded images\n\n")
-	m.paginator.PerPage = 10
-	m.paginator.SetTotalPages(len(m.downloadedImages))
-	start, end := m.paginator.GetSliceBounds(len(m.downloadedImages))
-	for _, item := range m.downloadedImages[start:end] {
-		b.WriteString("  • " + item + "\n\n")
+
+	if len(m.downloadedImages) == 0 {
+		b.WriteString("\n You have no images\n")
+		b.WriteString("\n b: back • q: quit\n")
+	} else {
+		b.WriteString("\n Downloaded images:\n")
+		m.paginator.PerPage = 10
+		m.paginator.SetTotalPages(len(m.downloadedImages))
+		start, end := m.paginator.GetSliceBounds(len(m.downloadedImages))
+		for _, item := range m.downloadedImages[start:end] {
+			b.WriteString("\n  • " + item + "\n")
+		}
+		b.WriteString("\n  " + m.paginator.View())
+		b.WriteString("\n\n ←/→ page • b: back • q: quit\n")
 	}
-	b.WriteString("  " + m.paginator.View())
-	b.WriteString("\n\n  h/l ←/→ page • q: quit\n")
 	return b.String()
 }
 
 func performAction() tea.Msg {
 	// Simulate a delay for the API call
-	housesHandler.DownloadImages()
+	housesService.DownloadImages()
 	return tickMsg(time.Now())
 }

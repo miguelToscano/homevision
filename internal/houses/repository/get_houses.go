@@ -54,13 +54,13 @@ func (hs *HousesRepository) GetHouses(page int) ([]domain.House, error) {
 	body, err := io.ReadAll(requestResponse.Body)
 
 	if err != nil {
-		return []domain.House{}, err
+		return nil, err
 	}
 
 	var unMarshalledRequestResponseBody RequestResponse
 
 	if err := json.Unmarshal(body, &unMarshalledRequestResponseBody); err != nil {
-		return []domain.House{}, err
+		return nil, err
 	}
 
 	response := []domain.House{}

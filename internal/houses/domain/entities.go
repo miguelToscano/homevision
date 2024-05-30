@@ -9,5 +9,5 @@ type House struct {
 }
 
 func (h *House) GetFileName() string {
-	return fmt.Sprintf("%d-%s.png", h.ID, h.Address)
+	return fmt.Sprintf("%d-%s", h.ID, h.Address)
 }

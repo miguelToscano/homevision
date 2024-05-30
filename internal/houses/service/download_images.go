@@ -1,15 +1,13 @@
 package service
 
 import (
+	"fmt"
 	"homevision/internal/houses/domain"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
-)
-
-const (
-	PAGES = 10
 )
 
 func (hs *HousesService) DownloadImages() error {
@@ -22,7 +20,7 @@ func (hs *HousesService) DownloadImages() error {
 		go func(page int) {
 			defer wg1.Done()
 
-			houses, _ := (*hs.housesRepository).GetHouses(page)
+			houses, _ := hs.housesRepository.GetHouses(page)
 
 			var wg2 sync.WaitGroup
 
@@ -40,7 +38,7 @@ func (hs *HousesService) DownloadImages() error {
 
 					defer requestResponse.Body.Close()
 
-					file, _ := os.Create(house.GetFileName())
+					file, _ := os.Create(fmt.Sprintf("%s/%s.%s", IMAGES_PATH, house.GetFileName(), strings.Split(house.PhotoURL, ".")[len(strings.Split(house.PhotoURL, "."))-1]))
 
 					io.Copy(file, requestResponse.Body)
 
